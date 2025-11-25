@@ -9,39 +9,29 @@
 using namespace sf;
 using namespace std;
 
-// Maksimalus plokðteliø kiekis vienu metu
 const int PLATES_AMOUNT = 100;
-// Greitis, kuriuo krenta plokðtelës
 const float PLATE_FALL_SPEED = 3.0f;
-
-// Dezoderantø dydis
 const float RAIN_PLATE_WIDTH = 40.f;
 const float RAIN_PLATE_HEIGHT = 80.f;
 
-// PlateEx struktûra – papildyta informacija apie plokðteles
 struct PlateEx : Plate
 {
-    bool isRain = false; // ar tai lietaus plokðtelë (pavojinga)
+    bool isRain = false;
 };
 
-// Funkcija, atnaujinanti plokðteliø padëtá ir þaidëjo sàveikà
+// Atnaujina plokðteliø padëtá ir sàveikà su þaidëju
 void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& score, int& missedPlates)
 {
     for (int i = 0; i < platesAmount; ++i)
     {
         PlateEx& plate = plates[i];
-
-        // jei plokðtelë neaktyvi, praleidþiame
         if (!plate.active) continue;
 
-        // kiekvieno kadro plokðtelë juda þemyn
         plate.y += PLATE_FALL_SPEED;
 
-        // nustatome plokðtelës dydá pagal tipà
         float plateWidth = plate.isRain ? RAIN_PLATE_WIDTH : PLATES_WIDTH;
         float plateHeight = plate.isRain ? RAIN_PLATE_HEIGHT : PLATES_HEIGHT;
 
-        // tikriname ar þaidëjas palietë plokðtelæ galva
         bool hit = (player.x + PLAYER_WIDTH > plate.x) && (player.x < plate.x + plateWidth) &&
             (plate.y <= player.y && plate.y + plateHeight >= player.y);
 
@@ -49,21 +39,18 @@ void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& sco
         {
             if (plate.isRain)
             {
-                // lietaus plokðtelë: score reset
                 score = 0;
                 plate.active = false;
-                plate.counted = true; // nebeskaièiuojame missed
+                plate.counted = true;
             }
             else
             {
-                // normalus platformø score
                 score += 1;
                 plate.active = false;
                 plate.counted = true;
             }
         }
 
-        // jei plokðtelë nukrito uþ ekrano ir nebuvo "counted", skaièiuojame missed
         if (plate.y > WINDOW_HEIGHT && !plate.counted)
         {
             if (!plate.isRain) missedPlates += 1;
@@ -73,19 +60,19 @@ void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& sco
     }
 }
 
-// Funkcija, spawninanti naujà plokðtelæ
+// Spawnina naujà plokðtelæ
 void SpawnPlate(PlateEx plates[], int platesAmount, float newX, bool isRain)
 {
     for (int i = 0; i < platesAmount; ++i)
     {
         if (!plates[i].active)
         {
-            plates[i].x = newX; // atsitiktinë x koordinatë
-            plates[i].y = -(isRain ? RAIN_PLATE_HEIGHT : PLATES_HEIGHT); // spawn virð ekrano
+            plates[i].x = newX;
+            plates[i].y = -(isRain ? RAIN_PLATE_HEIGHT : PLATES_HEIGHT);
             plates[i].active = true;
             plates[i].counted = false;
-            plates[i].isRain = isRain; // nurodome tipà
-            break; // spawn tik vienos plokðtelës
+            plates[i].isRain = isRain;
+            break;
         }
     }
 }
@@ -96,110 +83,91 @@ int main()
     RenderWindow app(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Indus Simulator - Survive In Vilnius DLC");
     app.setFramerateLimit(60);
 
-    // Tekstûros
-    Texture tBackground, tPlayer1, tPlayer2, tPlatform;
-    tBackground.loadFromFile("resources/background.png"); // fonas
-    tPlayer1.loadFromFile("resources/him.png");          // þaidëjas
-    tPlayer2.loadFromFile("resources/dezikas.png");      // lietaus plokðtelës
-    tPlatform.loadFromFile("resources/bolt.png");        // normalios plokðtelës
+    Texture tBackground, tPlayer1, tPlayer2, tPlatform, tPlatformAlt;
+    tBackground.loadFromFile("resources/background.png");
+    tPlayer1.loadFromFile("resources/him.png");
+    tPlayer2.loadFromFile("resources/dezikas.png");
+    tPlatform.loadFromFile("resources/bolt.png");
+    tPlatformAlt.loadFromFile("resources/wolt.png");
 
-    // Ðriftas
     Font font;
     font.loadFromFile("resources/arialbd.ttf");
 
-    // Teksto elementai score, missed ir rain warning
-    Text scoreText, missedText, rainWarning;
+    Text scoreText, missedText, rainWarning, bestScoreText;
 
-    // Score tekstas
-    scoreText.setFont(font);
-    scoreText.setCharacterSize(30);
-    scoreText.setFillColor(Color::Green);
-    scoreText.setOutlineThickness(1);
-    scoreText.setOutlineColor(Color::Black);
+    scoreText.setFont(font); scoreText.setCharacterSize(20);
+    scoreText.setFillColor(Color::Green); scoreText.setOutlineThickness(1); scoreText.setOutlineColor(Color::Black);
     scoreText.setPosition(10.f, 10.f);
 
-    // Missed plokðteliø tekstas
-    missedText.setFont(font);
-    missedText.setCharacterSize(30);
-    missedText.setFillColor(Color::Green);
-    missedText.setOutlineThickness(1);
-    missedText.setOutlineColor(Color::Black);
+    missedText.setFont(font); missedText.setCharacterSize(20);
+    missedText.setFillColor(Color::Green); missedText.setOutlineThickness(1); missedText.setOutlineColor(Color::Black);
     missedText.setPosition(10.f, 50.f);
 
-    // Lietaus plokðteliø áspëjimas ekrano viduryje
-    rainWarning.setFont(font);
-    rainWarning.setCharacterSize(25);
-    rainWarning.setFillColor(Color::Blue);
-    rainWarning.setOutlineThickness(2);
-    rainWarning.setOutlineColor(Color::White);
+    bestScoreText.setFont(font); bestScoreText.setCharacterSize(20);
+    bestScoreText.setFillColor(Color::Yellow); bestScoreText.setOutlineThickness(1); bestScoreText.setOutlineColor(Color::Black);
+    bestScoreText.setPosition(10.f, 90.f);
+
+    rainWarning.setFont(font); rainWarning.setCharacterSize(25);
+    rainWarning.setFillColor(Color::Blue); rainWarning.setOutlineThickness(2); rainWarning.setOutlineColor(Color::White);
     rainWarning.setString("CAUTION!!! DEODORANT!!!");
     FloatRect textRect = rainWarning.getLocalBounds();
-    rainWarning.setOrigin(textRect.left + textRect.width / 2.0f,
-        textRect.top + textRect.height / 2.0f);
+    rainWarning.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
     rainWarning.setPosition(WINDOW_WIDTH / 2.0f, WINDOW_HEIGHT / 2.0f);
 
-    // Sprite
     Sprite sprBackground(tBackground);
     Sprite sprPlayer(tPlayer1);
     Sprite sprPlatform(tPlatform);
     Sprite sprRainPlate(tPlayer2);
 
-    // Þaidëjas
-    Player player;
-    player.x = WINDOW_WIDTH / 2;
-    player.y = MAX_PLAYER_Y;
+    Player player; player.x = WINDOW_WIDTH / 2; player.y = MAX_PLAYER_Y;
 
-    // Plokðtelës masyvas
     PlateEx plates[PLATES_AMOUNT];
     for (int i = 0; i < PLATES_AMOUNT; ++i)
     {
-        plates[i].x = 0;
-        plates[i].y = -PLATES_HEIGHT; // pradþioje uþ ekrano
-        plates[i].counted = false;
-        plates[i].active = false;
-        plates[i].isRain = false;
+        plates[i].x = 0; plates[i].y = -PLATES_HEIGHT;
+        plates[i].counted = false; plates[i].active = false; plates[i].isRain = false;
     }
 
     Clock clock;
     float spawnTimer = 0.0f;
     const float spawnInterval = 1.0f;
 
-    float score = 0;
+    float score = 0, bestScore = 0;
     int missedPlates = 0;
 
-    bool rainActive = false; // ar vyksta lietaus plokðèiø seka
+    bool rainActive = false;
     int rainCount = 0;
+    bool altTexture = false;
+
+    int lastScoreFor7Dezikas = -1; // fiksuoja paskutiná score, kai spawnintas dezikas kas 7
 
     while (app.isOpen())
     {
         float deltaTime = clock.restart().asSeconds();
 
-        // Eventø tikrinimas
         Event e;
         while (app.pollEvent(e))
+        {
             if (e.type == Event::Closed) app.close();
+            if (e.type == Event::KeyPressed && e.key.code == Keyboard::Space)
+                altTexture = !altTexture;
+        }
 
-        // Þaidëjo judëjimas
         const float dx = 3.5f;
-        if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A))
-            player.x -= dx;
-        if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D))
-            player.x += dx;
+        if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) player.x -= dx;
+        if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)) player.x += dx;
 
-        // ribojame þaidëjà prie ekrano kraðtø
-        if (player.x < 0)
-            player.x = 0;
-        if (player.x + PLAYER_WIDTH > WINDOW_WIDTH)
-            player.x = WINDOW_WIDTH - PLAYER_WIDTH;
+        if (player.x < 0) player.x = 0;
+        if (player.x + PLAYER_WIDTH > WINDOW_WIDTH) player.x = WINDOW_WIDTH - PLAYER_WIDTH;
 
-        // Ar prasideda lietaus plokðteliø seka
+        // Deziko lietus startas
         if (!rainActive && score >= 20 && ((int)score % 20) == 0)
         {
             rainActive = true;
             rainCount = 0;
         }
 
-        // Spawn naujos plokðtelës kas spawnInterval sekundþiø
+        // Spawn
         spawnTimer += deltaTime;
         if (spawnTimer >= spawnInterval)
         {
@@ -210,22 +178,31 @@ int main()
             {
                 SpawnPlate(plates, PLATES_AMOUNT, newX, true);
                 rainCount++;
-                if (rainCount >= 10) rainActive = false; // baigëme lietaus sekà
+                if (rainCount >= 10) rainActive = false;
             }
-            else if (!rainActive)
+            else
             {
-                SpawnPlate(plates, PLATES_AMOUNT, newX, false);
+                // Dezikas kas 7 score vienà kartà
+                if ((int)score > 0 && ((int)score % 7 == 0) && ((int)score != lastScoreFor7Dezikas))
+                {
+                    SpawnPlate(plates, PLATES_AMOUNT, newX, true);
+                    lastScoreFor7Dezikas = (int)score;
+                }
+                else
+                {
+                    SpawnPlate(plates, PLATES_AMOUNT, newX, false);
+                }
             }
         }
 
-        // Atkuriame plokðteliø judëjimà ir sàveikà su þaidëju
         UpdatePlates(player, plates, PLATES_AMOUNT, score, missedPlates);
+
+        if (score > bestScore) bestScore = score;
 
         // Pieðimas
         app.clear();
         app.draw(sprBackground);
 
-        // Visø plokðteliø pieðimas
         for (int i = 0; i < PLATES_AMOUNT; ++i)
         {
             if (plates[i].active && plates[i].y >= 0 && plates[i].y <= WINDOW_HEIGHT)
@@ -233,33 +210,31 @@ int main()
                 if (plates[i].isRain)
                 {
                     sprRainPlate.setPosition(plates[i].x, plates[i].y);
-                    sprRainPlate.setScale(RAIN_PLATE_WIDTH / tPlayer2.getSize().x,
-                        RAIN_PLATE_HEIGHT / tPlayer2.getSize().y);
+                    sprRainPlate.setScale(RAIN_PLATE_WIDTH / tPlayer2.getSize().x, RAIN_PLATE_HEIGHT / tPlayer2.getSize().y);
                     app.draw(sprRainPlate);
                 }
                 else
                 {
                     sprPlatform.setPosition(plates[i].x, plates[i].y);
+                    if (altTexture) sprPlatform.setTexture(tPlatformAlt); else sprPlatform.setTexture(tPlatform);
                     app.draw(sprPlatform);
                 }
             }
         }
 
-        // Þaidëjas
         sprPlayer.setPosition(player.x, player.y);
         app.draw(sprPlayer);
 
-        // Score ir missed
         scoreText.setString("Deliveries: " + to_string((int)score));
         missedText.setString("Got called the n-word: " + to_string(missedPlates));
-        app.draw(scoreText);
-        app.draw(missedText);
+        bestScoreText.setString("Best score: " + to_string((int)bestScore));
 
-        // Lietaus áspëjimas ekrano viduryje
-        if (rainActive)
-        {
-            app.draw(rainWarning);
-        }
+        if (altTexture) { scoreText.setFillColor(Color::Cyan); missedText.setFillColor(Color::Cyan); }
+        else { scoreText.setFillColor(Color::Green); missedText.setFillColor(Color::Green); }
+
+        app.draw(scoreText); app.draw(missedText); app.draw(bestScoreText);
+
+        if (rainActive) app.draw(rainWarning);
 
         app.display();
     }
