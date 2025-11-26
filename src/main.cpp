@@ -1,13 +1,17 @@
+// main.cpp (suderinta versija)
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
-#include "Objects.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Objects.h ar objects.h)
-#include "Utils.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Utils.h ar utils.h)
-#include "Defines.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Defines.h ar defines.h)
+
+// *** PASTABA: įsitikink, kad šie include atitinka tikslų failų vardą tavo diske (case-sensitive) ***
+#include "Objects.h"
+#include "Utils.h"
+#include "Defines.h"
+
 #include <cstdlib>
 #include <ctime>
 #include <string>
-#include <optional> // Reikalingas SFML 3.x pollEvent()
-#include <iostream> // Pridėta klaidų pranešimams
+#include <optional>
+#include <iostream>
 
 using namespace sf;
 using namespace std;
@@ -22,6 +26,7 @@ struct PlateEx : Plate
     bool isRain = false;
 };
 
+// Atnaujina plokšteles (judėjimas + collision)
 void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& score, int& missedPlates)
 {
     for (int i = 0; i < platesAmount; ++i)
@@ -34,20 +39,21 @@ void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& sco
         float plateWidth = plate.isRain ? RAIN_PLATE_WIDTH : PLATES_WIDTH;
         float plateHeight = plate.isRain ? RAIN_PLATE_HEIGHT : PLATES_HEIGHT;
 
-        bool hit = (player.x + PLAYER_WIDTH > plate.x) && (player.x < plate.x + plateWidth) &&
-            (plate.y <= player.y && plate.y + plateHeight >= player.y);
+        bool hit = (player.x + PLAYER_WIDTH > plate.x) &&
+                   (player.x < plate.x + plateWidth) &&
+                   (plate.y <= player.y && plate.y + plateHeight >= player.y);
 
         if (hit)
         {
             if (plate.isRain)
             {
-                score = 0;
+                score = 0.f;               // dezikas resetina score
                 plate.active = false;
                 plate.counted = true;
             }
             else
             {
-                score += 1;
+                score += 1.f;             // normaliai +1
                 plate.active = false;
                 plate.counted = true;
             }
@@ -62,6 +68,7 @@ void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& sco
     }
 }
 
+// Spawnina plokštelę virš ekrano
 void SpawnPlate(PlateEx plates[], int platesAmount, float newX, bool isRain)
 {
     for (int i = 0; i < platesAmount; ++i)
@@ -80,139 +87,125 @@ void SpawnPlate(PlateEx plates[], int platesAmount, float newX, bool isRain)
 
 int main()
 {
-    srand((unsigned)time(nullptr));
+    srand(static_cast<unsigned>(time(nullptr)));
+
+    // VideoMode: aiškiai perduodame Vector2u (suderinama su SFML 2.6+)
     RenderWindow app(VideoMode(Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Indus Simulator - Survive In Vilnius DLC");
     app.setFramerateLimit(60);
 
-    // Patikriname, ar langas sėkmingai sukurtas.
-    if (!app.isOpen()) {
-        cerr << "KLAIDA: SFML langas nepavyko sukurti. Patikrinkite WINDOW_WIDTH/HEIGHT konstantes arba SFML konfigūraciją." << endl;
+    if (!app.isOpen())
+    {
+        cerr << "KLAIDA: nepavyko sukurti lango." << endl;
         return 1;
     }
 
-    Texture tBackground, tPlayer1, tPlayer2, tPlatform, tPlatformAlt;
-
-    // Tikriname tekstūrų įkėlimą, kad nebūtų "nodiscard" įspėjimų
-    if (!tBackground.loadFromFile("resources/background.png")) {
-        cerr << "KLAIDA: Nepavyko įkelti fono tekstūros: resources/background.png" << endl;
-    }
-    if (!tPlayer1.loadFromFile("resources/him.png")) {
-        cerr << "KLAIDA: Nepavyko įkelti žaidėjo 1 tekstūros: resources/him.png" << endl;
-    }
-    if (!tPlayer2.loadFromFile("resources/dezikas.png")) {
-        cerr << "KLAIDA: Nepavyko įkelti žaidėjo 2/Deziko tekstūros: resources/dezikas.png" << endl;
-    }
-    if (!tPlatform.loadFromFile("resources/bolt.png")) {
-        cerr << "KLAIDA: Nepavyko įkelti platformos 1 tekstūros: resources/bolt.png" << endl;
-    }
-    if (!tPlatformAlt.loadFromFile("resources/wolt.png")) {
-        cerr << "KLAIDA: Nepavyko įkelti platformos 2 tekstūros: resources/wolt.png" << endl;
-    }
+    // Textures
+    Texture tBackground, tPlayer, tPlatform, tPlatformAlt, tDezikas;
+    if (!tBackground.loadFromFile("resources/background.png")) cerr << "Fail: background.png\n";
+    if (!tPlayer.loadFromFile("resources/him.png")) cerr << "Fail: him.png\n";
+    if (!tPlatform.loadFromFile("resources/bolt.png")) cerr << "Fail: bolt.png\n";
+    if (!tPlatformAlt.loadFromFile("resources/wolt.png")) cerr << "Fail: wolt.png\n";
+    if (!tDezikas.loadFromFile("resources/dezikas.png")) cerr << "Fail: dezikas.png\n";
 
     Font font;
-    if (!font.openFromFile("resources/arialbd.ttf"))
-    {
-        cerr << "KLAIDA: Nepavyko įkelti šrifto: resources/arialbd.ttf" << endl;
-        // Tęsiama be šrifto, jei nepavyko, bet tekstas gali nerodyti
-    }
+    if (!font.openFromFile("resources/arialbd.ttf")) cerr << "Fail: arialbd.ttf\n";
 
-    Text scoreText(font), missedText(font), rainWarning(font), bestScoreText(font);
+    // Text objects (naudojame Vector2f su setPosition)
+    Text scoreText(font), missedText(font), bestScoreText(font), rainWarning(font);
+    scoreText.setCharacterSize(20);
+    missedText.setCharacterSize(20);
+    bestScoreText.setCharacterSize(20);
+    rainWarning.setCharacterSize(28);
 
-    scoreText.setFont(font); scoreText.setCharacterSize(20);
-    scoreText.setFillColor(Color::Green); scoreText.setOutlineThickness(1); scoreText.setOutlineColor(Color::Black);
-    scoreText.setPosition(Vector2f(10.f, 10.f));
-
-    missedText.setFont(font); missedText.setCharacterSize(20);
-    missedText.setFillColor(Color::Green); missedText.setOutlineThickness(1); missedText.setOutlineColor(Color::Black);
-    missedText.setPosition(Vector2f(10.f, 50.f));
-
-    bestScoreText.setFont(font); bestScoreText.setCharacterSize(20);
-    bestScoreText.setFillColor(Color::Yellow); bestScoreText.setOutlineThickness(1); bestScoreText.setOutlineColor(Color::Black);
-    bestScoreText.setPosition(Vector2f(10.f, 90.f));
-
-    rainWarning.setFont(font); rainWarning.setCharacterSize(25);
-    rainWarning.setFillColor(Color::Blue); rainWarning.setOutlineThickness(2); rainWarning.setOutlineColor(Color::White);
+    scoreText.setFillColor(Color::Green);
+    missedText.setFillColor(Color::Green);
+    bestScoreText.setFillColor(Color::Yellow);
+    rainWarning.setFillColor(Color::Blue);
+    rainWarning.setOutlineColor(Color::White);
+    rainWarning.setOutlineThickness(2);
     rainWarning.setString("CAUTION!!! DEODORANT!!!");
 
-    // Kadangi jūsų SFML versija negali pasiekti sf::FloatRect narių (left, top, width, height),
-    // paliekame be setOrigin centravimo, kad išvengtume kompiliavimo klaidos.
-    rainWarning.setPosition(Vector2f(WINDOW_WIDTH / 2.0f, WINDOW_HEIGHT / 2.0f));
+    // Dėmesio: setPosition prašo vieno Vector2 parameterio
+    scoreText.setPosition(Vector2f(10.f, 10.f));
+    missedText.setPosition(Vector2f(10.f, 50.f));
+    bestScoreText.setPosition(Vector2f(10.f, 90.f));
+    rainWarning.setPosition(Vector2f(WINDOW_WIDTH / 2.f - 180.f, WINDOW_HEIGHT / 2.f - 20.f));
 
     Sprite sprBackground(tBackground);
-    Sprite sprPlayer(tPlayer1);
+    Sprite sprPlayer(tPlayer);
     Sprite sprPlatform(tPlatform);
-    Sprite sprRainPlate(tPlayer2);
+    Sprite sprRain(tDezikas);
 
-    Player player; player.x = WINDOW_WIDTH / 2; player.y = MAX_PLAYER_Y;
+    Player player;
+    player.x = WINDOW_WIDTH / 2.f;
+    player.y = MAX_PLAYER_Y;
 
     PlateEx plates[PLATES_AMOUNT];
     for (int i = 0; i < PLATES_AMOUNT; ++i)
     {
-        plates[i].x = 0; plates[i].y = -PLATES_HEIGHT;
-        plates[i].counted = false; plates[i].active = false; plates[i].isRain = false;
+        plates[i].x = 0.f;
+        plates[i].y = -PLATES_HEIGHT;
+        plates[i].counted = false;
+        plates[i].active = false;
+        plates[i].isRain = false;
     }
 
     Clock clock;
-    float spawnTimer = 0.0f;
+    float spawnTimer = 0.f;
     const float spawnInterval = 1.0f;
 
-    float score = 0, bestScore = 0;
+    float score = 0.f, bestScore = 0.f;
     int missedPlates = 0;
 
     bool rainActive = false;
     int rainCount = 0;
-    bool altTexture = false; // Būsena, ar naudojama alternatyvi tekstūra
-
+    bool altTexture = false; // toggle only changes platform texture
     int lastScoreFor7Dezikas = -1;
+
+    // vienas debounce kintamasis SPACE toggle
+    bool spacePressedLastFrame = false;
 
     while (app.isOpen())
     {
         float deltaTime = clock.restart().asSeconds();
 
-        // Naudojama teisinga SFML 3.x įvykių ciklo struktūra
-        while (auto optionalEvent = app.pollEvent())
+        // Event loop (patikriname Close)
+        while (auto ev = app.pollEvent())
         {
-            const Event& e = *optionalEvent;
-
-            if (e.is<Event::Closed>())
-            {
-                app.close();
-            }
-            // Klavišo tikrinimas dabar tvarkomas toliau, naudojant isKeyPressed, nes Event handler'is neveikia
+            if (ev->is<Event::Closed>()) app.close();
         }
 
-        // Laikinas klavišo perjungimo tvarkymas, kol event::KeyPressed neveikia
-        // ĮSPĖJIMAS: tai perjungia tekstūrą kiekviename kadre, kol laikomas SPACE
-        if (Keyboard::isKeyPressed(Keyboard::Key::Space)) {
-            // Šiek tiek geresnis perjungimas: tikrinti, ar klavišas buvo paspaustas tik vieną kartą
-            static bool space_pressed = false;
-            if (!space_pressed) {
-                altTexture = !altTexture;
-                space_pressed = true;
-            }
-        } else {
-            static bool space_pressed = false;
-            space_pressed = false;
-        }
+        // SPACE debounce (vienas paspaudimas = vienas toggle)
+        bool spaceNow = Keyboard::isKeyPressed(Keyboard::Key::Space);
+        if (spaceNow && !spacePressedLastFrame)
+            altTexture = !altTexture;
+        spacePressedLastFrame = spaceNow;
 
+        // Player movement (polling)
         const float dx = 3.5f;
-        if (Keyboard::isKeyPressed(Keyboard::Key::Left) || Keyboard::isKeyPressed(Keyboard::Key::A)) player.x -= dx;
-        if (Keyboard::isKeyPressed(Keyboard::Key::Right) || Keyboard::isKeyPressed(Keyboard::Key::D)) player.x += dx;
+        if (Keyboard::isKeyPressed(Keyboard::Key::Left) || Keyboard::isKeyPressed(Keyboard::Key::A))
+            player.x -= dx;
+        if (Keyboard::isKeyPressed(Keyboard::Key::Right) || Keyboard::isKeyPressed(Keyboard::Key::D))
+            player.x += dx;
 
-        if (player.x < 0) player.x = 0;
+        // clamp to screen
+        if (player.x < 0.f) player.x = 0.f;
         if (player.x + PLAYER_WIDTH > WINDOW_WIDTH) player.x = WINDOW_WIDTH - PLAYER_WIDTH;
 
-        if (!rainActive && score >= 20 && ((int)score % 20) == 0)
+        // rain sequence trigger (20,40,...)
+        int scoreInt = static_cast<int>(score);
+        if (!rainActive && scoreInt >= 20 && (scoreInt % 20) == 0)
         {
             rainActive = true;
             rainCount = 0;
         }
 
+        // spawn logic
         spawnTimer += deltaTime;
         if (spawnTimer >= spawnInterval)
         {
-            spawnTimer = 0.0f;
-            float newX = float(rand() % (WINDOW_WIDTH - PLATES_WIDTH));
+            spawnTimer = 0.f;
+            float newX = static_cast<float>(rand() % (WINDOW_WIDTH - PLATES_WIDTH));
 
             if (rainActive && rainCount < 10)
             {
@@ -222,10 +215,10 @@ int main()
             }
             else
             {
-                if ((int)score > 0 && ((int)score % 7 == 0) && ((int)score != lastScoreFor7Dezikas))
+                if (scoreInt > 0 && (scoreInt % 7) == 0 && scoreInt != lastScoreFor7Dezikas && !rainActive)
                 {
                     SpawnPlate(plates, PLATES_AMOUNT, newX, true);
-                    lastScoreFor7Dezikas = (int)score;
+                    lastScoreFor7Dezikas = scoreInt;
                 }
                 else
                 {
@@ -234,44 +227,60 @@ int main()
             }
         }
 
+        // update plates (movement + collisions)
         UpdatePlates(player, plates, PLATES_AMOUNT, score, missedPlates);
 
         if (score > bestScore) bestScore = score;
 
+        // drawing
         app.clear();
         app.draw(sprBackground);
 
         for (int i = 0; i < PLATES_AMOUNT; ++i)
         {
-            if (plates[i].active && plates[i].y >= 0 && plates[i].y <= WINDOW_HEIGHT)
+            PlateEx& p = plates[i];
+            if (!p.active) continue;
+            if (p.y < 0.f || p.y > WINDOW_HEIGHT) continue;
+
+            if (p.isRain)
             {
-                if (plates[i].isRain)
-                {
-                    sprRainPlate.setPosition(Vector2f(plates[i].x, plates[i].y));
-                    sprRainPlate.setScale(Vector2f(RAIN_PLATE_WIDTH / tPlayer2.getSize().x, RAIN_PLATE_HEIGHT / tPlayer2.getSize().y));
-                    app.draw(sprRainPlate);
-                }
-                else
-                {
-                    sprPlatform.setPosition(Vector2f(plates[i].x, plates[i].y));
-                    if (altTexture) sprPlatform.setTexture(tPlatformAlt); else sprPlatform.setTexture(tPlatform);
-                    app.draw(sprPlatform);
-                }
+                sprRain.setPosition(Vector2f(p.x, p.y));
+                sprRain.setScale(Vector2f(RAIN_PLATE_WIDTH / tDezikas.getSize().x,
+                                          RAIN_PLATE_HEIGHT / tDezikas.getSize().y));
+                app.draw(sprRain);
+            }
+            else
+            {
+                sprPlatform.setPosition(Vector2f(p.x, p.y));
+                sprPlatform.setTexture(altTexture ? tPlatformAlt : tPlatform);
+                app.draw(sprPlatform);
             }
         }
 
+        // player sprite: HIM only (we do NOT switch player -> dezikas)
+        sprPlayer.setTexture(tPlayer);
         sprPlayer.setPosition(Vector2f(player.x, player.y));
-        if (altTexture) sprPlayer.setTexture(tPlayer2); else sprPlayer.setTexture(tPlayer1);
         app.draw(sprPlayer);
 
-        scoreText.setString("Deliveries: " + to_string((int)score));
-        missedText.setString("Got called the n-word: " + to_string(missedPlates));
-        bestScoreText.setString("Best score: " + to_string((int)bestScore));
+        // UI text
+        scoreText.setString("Deliveries: " + to_string(static_cast<int>(score)));
+        missedText.setString("Missed plates: " + to_string(missedPlates));
+        bestScoreText.setString("Best score: " + to_string(static_cast<int>(bestScore)));
 
-        if (altTexture) { scoreText.setFillColor(Color::Cyan); missedText.setFillColor(Color::Cyan); }
-        else { scoreText.setFillColor(Color::Green); missedText.setFillColor(Color::Green); }
+        if (altTexture)
+        {
+            scoreText.setFillColor(Color::Cyan);
+            missedText.setFillColor(Color::Cyan);
+        }
+        else
+        {
+            scoreText.setFillColor(Color::Green);
+            missedText.setFillColor(Color::Green);
+        }
 
-        app.draw(scoreText); app.draw(missedText); app.draw(bestScoreText);
+        app.draw(scoreText);
+        app.draw(missedText);
+        app.draw(bestScoreText);
 
         if (rainActive) app.draw(rainWarning);
 
