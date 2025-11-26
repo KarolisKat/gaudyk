@@ -88,13 +88,6 @@ int main()
     RenderWindow app(VideoMode(Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Indus Simulator - Survive In Vilnius DLC");
     app.setFramerateLimit(60);
 
-    if (!app.isOpen())
-    {
-        cerr << "KLAIDA: nepavyko sukurti lango." << endl;
-        return 1;
-    }
-
-    // Textures
     Texture tBackground, tPlayer, tPlatform, tPlatformAlt, tDezikas;
     if (!tBackground.loadFromFile("resources/background.png")) cerr << "Fail: background.png\n";
     if (!tPlayer.loadFromFile("resources/him.png")) cerr << "Fail: him.png\n";
