@@ -264,7 +264,7 @@ int main()
 
         // UI text
         scoreText.setString("Deliveries: " + to_string(static_cast<int>(score)));
-        missedText.setString("Missed plates: " + to_string(missedPlates));
+        missedText.setString("Got called by the n-word: " + to_string(missedPlates));
         bestScoreText.setString("Best score: " + to_string(static_cast<int>(bestScore)));
 
         if (altTexture)
