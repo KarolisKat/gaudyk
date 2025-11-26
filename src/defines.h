@@ -1,9 +1,9 @@
 #pragma once
 
 const int WINDOW_WIDTH = 400;    // ekrano plotis
-const int WINDOW_HEIGHT = 533;   // ekrano aukðtis
-const float MAX_PLAYER_Y = 450;  // þaidëjo aukðtis
-const float PLAYER_WIDTH = 80;   // þaidëjo plotis
+const int WINDOW_HEIGHT = 533;   // ekrano aukï¿½tis
+const float MAX_PLAYER_Y = 450;  // ï¿½aidï¿½jo aukï¿½tis
+const float PLAYER_WIDTH = 80;   // ï¿½aidï¿½jo plotis
 
-const int PLATES_WIDTH = 80;     // plokðtelës plotis
-const int PLATES_HEIGHT = 80;    // plokðtelës aukðtis
+const int PLATES_WIDTH = 80;     // plokï¿½telï¿½s plotis
+const int PLATES_HEIGHT = 80;    // plokï¿½telï¿½s aukï¿½tis

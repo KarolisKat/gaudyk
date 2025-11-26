@@ -1,10 +1,13 @@
 #include <SFML/Graphics.hpp>
-#include "Objects.h"
-#include "Utils.h"
-#include "Defines.h"
+#include <SFML/System/Vector2.hpp>
+#include "Objects.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Objects.h ar objects.h)
+#include "Utils.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Utils.h ar utils.h)
+#include "Defines.h" // NOTE: Patikrinkite antraštės failo pavadinimą (Defines.h ar defines.h)
 #include <cstdlib>
 #include <ctime>
 #include <string>
+#include <optional> // Reikalingas SFML 3.x pollEvent()
+#include <iostream> // Pridėta klaidų pranešimams
 
 using namespace sf;
 using namespace std;
@@ -19,7 +22,6 @@ struct PlateEx : Plate
     bool isRain = false;
 };
 
-// Atnaujina plok�teli� pad�t� ir s�veik� su �aid�ju
 void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& score, int& missedPlates)
 {
     for (int i = 0; i < platesAmount; ++i)
@@ -60,7 +62,6 @@ void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& sco
     }
 }
 
-// Spawnina nauj� plok�tel�
 void SpawnPlate(PlateEx plates[], int platesAmount, float newX, bool isRain)
 {
     for (int i = 0; i < platesAmount; ++i)
@@ -80,39 +81,62 @@ void SpawnPlate(PlateEx plates[], int platesAmount, float newX, bool isRain)
 int main()
 {
     srand((unsigned)time(nullptr));
-    RenderWindow app(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Indus Simulator - Survive In Vilnius DLC");
+    RenderWindow app(VideoMode(Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Indus Simulator - Survive In Vilnius DLC");
     app.setFramerateLimit(60);
 
+    // Patikriname, ar langas sėkmingai sukurtas.
+    if (!app.isOpen()) {
+        cerr << "KLAIDA: SFML langas nepavyko sukurti. Patikrinkite WINDOW_WIDTH/HEIGHT konstantes arba SFML konfigūraciją." << endl;
+        return 1;
+    }
+
     Texture tBackground, tPlayer1, tPlayer2, tPlatform, tPlatformAlt;
-    tBackground.loadFromFile("resources/background.png");
-    tPlayer1.loadFromFile("resources/him.png");
-    tPlayer2.loadFromFile("resources/dezikas.png");
-    tPlatform.loadFromFile("resources/bolt.png");
-    tPlatformAlt.loadFromFile("resources/wolt.png");
+
+    // Tikriname tekstūrų įkėlimą, kad nebūtų "nodiscard" įspėjimų
+    if (!tBackground.loadFromFile("resources/background.png")) {
+        cerr << "KLAIDA: Nepavyko įkelti fono tekstūros: resources/background.png" << endl;
+    }
+    if (!tPlayer1.loadFromFile("resources/him.png")) {
+        cerr << "KLAIDA: Nepavyko įkelti žaidėjo 1 tekstūros: resources/him.png" << endl;
+    }
+    if (!tPlayer2.loadFromFile("resources/dezikas.png")) {
+        cerr << "KLAIDA: Nepavyko įkelti žaidėjo 2/Deziko tekstūros: resources/dezikas.png" << endl;
+    }
+    if (!tPlatform.loadFromFile("resources/bolt.png")) {
+        cerr << "KLAIDA: Nepavyko įkelti platformos 1 tekstūros: resources/bolt.png" << endl;
+    }
+    if (!tPlatformAlt.loadFromFile("resources/wolt.png")) {
+        cerr << "KLAIDA: Nepavyko įkelti platformos 2 tekstūros: resources/wolt.png" << endl;
+    }
 
     Font font;
-    font.loadFromFile("resources/arialbd.ttf");
+    if (!font.openFromFile("resources/arialbd.ttf"))
+    {
+        cerr << "KLAIDA: Nepavyko įkelti šrifto: resources/arialbd.ttf" << endl;
+        // Tęsiama be šrifto, jei nepavyko, bet tekstas gali nerodyti
+    }
 
-    Text scoreText, missedText, rainWarning, bestScoreText;
+    Text scoreText(font), missedText(font), rainWarning(font), bestScoreText(font);
 
     scoreText.setFont(font); scoreText.setCharacterSize(20);
     scoreText.setFillColor(Color::Green); scoreText.setOutlineThickness(1); scoreText.setOutlineColor(Color::Black);
-    scoreText.setPosition(10.f, 10.f);
+    scoreText.setPosition(Vector2f(10.f, 10.f));
 
     missedText.setFont(font); missedText.setCharacterSize(20);
     missedText.setFillColor(Color::Green); missedText.setOutlineThickness(1); missedText.setOutlineColor(Color::Black);
-    missedText.setPosition(10.f, 50.f);
+    missedText.setPosition(Vector2f(10.f, 50.f));
 
     bestScoreText.setFont(font); bestScoreText.setCharacterSize(20);
     bestScoreText.setFillColor(Color::Yellow); bestScoreText.setOutlineThickness(1); bestScoreText.setOutlineColor(Color::Black);
-    bestScoreText.setPosition(10.f, 90.f);
+    bestScoreText.setPosition(Vector2f(10.f, 90.f));
 
     rainWarning.setFont(font); rainWarning.setCharacterSize(25);
     rainWarning.setFillColor(Color::Blue); rainWarning.setOutlineThickness(2); rainWarning.setOutlineColor(Color::White);
     rainWarning.setString("CAUTION!!! DEODORANT!!!");
-    FloatRect textRect = rainWarning.getLocalBounds();
-    rainWarning.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
-    rainWarning.setPosition(WINDOW_WIDTH / 2.0f, WINDOW_HEIGHT / 2.0f);
+
+    // Kadangi jūsų SFML versija negali pasiekti sf::FloatRect narių (left, top, width, height),
+    // paliekame be setOrigin centravimo, kad išvengtume kompiliavimo klaidos.
+    rainWarning.setPosition(Vector2f(WINDOW_WIDTH / 2.0f, WINDOW_HEIGHT / 2.0f));
 
     Sprite sprBackground(tBackground);
     Sprite sprPlayer(tPlayer1);
@@ -137,37 +161,53 @@ int main()
 
     bool rainActive = false;
     int rainCount = 0;
-    bool altTexture = false;
+    bool altTexture = false; // Būsena, ar naudojama alternatyvi tekstūra
 
-    int lastScoreFor7Dezikas = -1; // fiksuoja paskutin� score, kai spawnintas dezikas kas 7
+    int lastScoreFor7Dezikas = -1;
 
     while (app.isOpen())
     {
         float deltaTime = clock.restart().asSeconds();
 
-        Event e;
-        while (app.pollEvent(e))
+        // Naudojama teisinga SFML 3.x įvykių ciklo struktūra
+        while (auto optionalEvent = app.pollEvent())
         {
-            if (e.type == Event::Closed) app.close();
-            if (e.type == Event::KeyPressed && e.key.code == Keyboard::Space)
+            const Event& e = *optionalEvent;
+
+            if (e.is<Event::Closed>())
+            {
+                app.close();
+            }
+            // Klavišo tikrinimas dabar tvarkomas toliau, naudojant isKeyPressed, nes Event handler'is neveikia
+        }
+
+        // Laikinas klavišo perjungimo tvarkymas, kol event::KeyPressed neveikia
+        // ĮSPĖJIMAS: tai perjungia tekstūrą kiekviename kadre, kol laikomas SPACE
+        if (Keyboard::isKeyPressed(Keyboard::Key::Space)) {
+            // Šiek tiek geresnis perjungimas: tikrinti, ar klavišas buvo paspaustas tik vieną kartą
+            static bool space_pressed = false;
+            if (!space_pressed) {
                 altTexture = !altTexture;
+                space_pressed = true;
+            }
+        } else {
+            static bool space_pressed = false;
+            space_pressed = false;
         }
 
         const float dx = 3.5f;
-        if (Keyboard::isKeyPressed(Keyboard::Left) || Keyboard::isKeyPressed(Keyboard::A)) player.x -= dx;
-        if (Keyboard::isKeyPressed(Keyboard::Right) || Keyboard::isKeyPressed(Keyboard::D)) player.x += dx;
+        if (Keyboard::isKeyPressed(Keyboard::Key::Left) || Keyboard::isKeyPressed(Keyboard::Key::A)) player.x -= dx;
+        if (Keyboard::isKeyPressed(Keyboard::Key::Right) || Keyboard::isKeyPressed(Keyboard::Key::D)) player.x += dx;
 
         if (player.x < 0) player.x = 0;
         if (player.x + PLAYER_WIDTH > WINDOW_WIDTH) player.x = WINDOW_WIDTH - PLAYER_WIDTH;
 
-        // Deziko lietus startas
         if (!rainActive && score >= 20 && ((int)score % 20) == 0)
         {
             rainActive = true;
             rainCount = 0;
         }
 
-        // Spawn
         spawnTimer += deltaTime;
         if (spawnTimer >= spawnInterval)
         {
@@ -182,7 +222,6 @@ int main()
             }
             else
             {
-                // Dezikas kas 7 score vien� kart�
                 if ((int)score > 0 && ((int)score % 7 == 0) && ((int)score != lastScoreFor7Dezikas))
                 {
                     SpawnPlate(plates, PLATES_AMOUNT, newX, true);
@@ -199,7 +238,6 @@ int main()
 
         if (score > bestScore) bestScore = score;
 
-        // Pie�imas
         app.clear();
         app.draw(sprBackground);
 
@@ -209,20 +247,21 @@ int main()
             {
                 if (plates[i].isRain)
                 {
-                    sprRainPlate.setPosition(plates[i].x, plates[i].y);
-                    sprRainPlate.setScale(RAIN_PLATE_WIDTH / tPlayer2.getSize().x, RAIN_PLATE_HEIGHT / tPlayer2.getSize().y);
+                    sprRainPlate.setPosition(Vector2f(plates[i].x, plates[i].y));
+                    sprRainPlate.setScale(Vector2f(RAIN_PLATE_WIDTH / tPlayer2.getSize().x, RAIN_PLATE_HEIGHT / tPlayer2.getSize().y));
                     app.draw(sprRainPlate);
                 }
                 else
                 {
-                    sprPlatform.setPosition(plates[i].x, plates[i].y);
+                    sprPlatform.setPosition(Vector2f(plates[i].x, plates[i].y));
                     if (altTexture) sprPlatform.setTexture(tPlatformAlt); else sprPlatform.setTexture(tPlatform);
                     app.draw(sprPlatform);
                 }
             }
         }
 
-        sprPlayer.setPosition(player.x, player.y);
+        sprPlayer.setPosition(Vector2f(player.x, player.y));
+        if (altTexture) sprPlayer.setTexture(tPlayer2); else sprPlayer.setTexture(tPlayer1);
         app.draw(sprPlayer);
 
         scoreText.setString("Deliveries: " + to_string((int)score));

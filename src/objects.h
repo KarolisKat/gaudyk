@@ -7,7 +7,7 @@ struct Player
     float LegsEndX() { return x + 64; }
     float LegsY() { return y + 73; }
 
-    float x, y; // virðutinio kairiojo kampo koordinates
+    float x, y; // virï¿½utinio kairiojo kampo koordinates
 };
 
 struct Plate
@@ -19,5 +19,5 @@ struct Plate
 
     float x, y;
     bool counted = false;
-    bool active = false; // naujas: ar plokðtelë spawninta ir krenta
+    bool active = false; // naujas: ar plokï¿½telï¿½ spawninta ir krenta
 };
