@@ -1,8 +1,5 @@
-// main.cpp (suderinta versija)
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
-
-// *** PASTABA: įsitikink, kad šie include atitinka tikslų failų vardą tavo diske (case-sensitive) ***
 #include "Objects.h"
 #include "Utils.h"
 #include "Defines.h"
@@ -26,7 +23,6 @@ struct PlateEx : Plate
     bool isRain = false;
 };
 
-// Atnaujina plokšteles (judėjimas + collision)
 void UpdatePlates(Player& player, PlateEx plates[], int platesAmount, float& score, int& missedPlates)
 {
     for (int i = 0; i < platesAmount; ++i)
@@ -89,7 +85,6 @@ int main()
 {
     srand(static_cast<unsigned>(time(nullptr)));
 
-    // VideoMode: aiškiai perduodame Vector2u (suderinama su SFML 2.6+)
     RenderWindow app(VideoMode(Vector2u(WINDOW_WIDTH, WINDOW_HEIGHT)), "Indus Simulator - Survive In Vilnius DLC");
     app.setFramerateLimit(60);
 
@@ -110,7 +105,6 @@ int main()
     Font font;
     if (!font.openFromFile("resources/arialbd.ttf")) cerr << "Fail: arialbd.ttf\n";
 
-    // Text objects (naudojame Vector2f su setPosition)
     Text scoreText(font), missedText(font), bestScoreText(font), rainWarning(font);
     scoreText.setCharacterSize(20);
     missedText.setCharacterSize(20);
@@ -125,7 +119,6 @@ int main()
     rainWarning.setOutlineThickness(2);
     rainWarning.setString("CAUTION!!! DEODORANT!!!");
 
-    // Dėmesio: setPosition prašo vieno Vector2 parameterio
     scoreText.setPosition(Vector2f(10.f, 10.f));
     missedText.setPosition(Vector2f(10.f, 50.f));
     bestScoreText.setPosition(Vector2f(10.f, 90.f));
@@ -159,40 +152,32 @@ int main()
 
     bool rainActive = false;
     int rainCount = 0;
-    bool altTexture = false; // toggle only changes platform texture
+    bool altTexture = false;
     int lastScoreFor7Dezikas = -1;
 
-    // vienas debounce kintamasis SPACE toggle
     bool spacePressedLastFrame = false;
 
     while (app.isOpen())
     {
         float deltaTime = clock.restart().asSeconds();
 
-        // Event loop (patikriname Close)
         while (auto ev = app.pollEvent())
         {
             if (ev->is<Event::Closed>()) app.close();
         }
-
-        // SPACE debounce (vienas paspaudimas = vienas toggle)
         bool spaceNow = Keyboard::isKeyPressed(Keyboard::Key::Space);
         if (spaceNow && !spacePressedLastFrame)
             altTexture = !altTexture;
         spacePressedLastFrame = spaceNow;
 
-        // Player movement (polling)
         const float dx = 3.5f;
         if (Keyboard::isKeyPressed(Keyboard::Key::Left) || Keyboard::isKeyPressed(Keyboard::Key::A))
             player.x -= dx;
         if (Keyboard::isKeyPressed(Keyboard::Key::Right) || Keyboard::isKeyPressed(Keyboard::Key::D))
             player.x += dx;
-
-        // clamp to screen
         if (player.x < 0.f) player.x = 0.f;
         if (player.x + PLAYER_WIDTH > WINDOW_WIDTH) player.x = WINDOW_WIDTH - PLAYER_WIDTH;
 
-        // rain sequence trigger (20,40,...)
         int scoreInt = static_cast<int>(score);
         if (!rainActive && scoreInt >= 20 && (scoreInt % 20) == 0)
         {
@@ -200,7 +185,7 @@ int main()
             rainCount = 0;
         }
 
-        // spawn logic
+        // spawn logika
         spawnTimer += deltaTime;
         if (spawnTimer >= spawnInterval)
         {
@@ -227,12 +212,10 @@ int main()
             }
         }
 
-        // update plates (movement + collisions)
         UpdatePlates(player, plates, PLATES_AMOUNT, score, missedPlates);
 
         if (score > bestScore) bestScore = score;
 
-        // drawing
         app.clear();
         app.draw(sprBackground);
 
@@ -257,12 +240,10 @@ int main()
             }
         }
 
-        // player sprite: HIM only (we do NOT switch player -> dezikas)
         sprPlayer.setTexture(tPlayer);
         sprPlayer.setPosition(Vector2f(player.x, player.y));
         app.draw(sprPlayer);
 
-        // UI text
         scoreText.setString("Deliveries: " + to_string(static_cast<int>(score)));
         missedText.setString("Got called by the n-word: " + to_string(missedPlates));
         bestScoreText.setString("Best score: " + to_string(static_cast<int>(bestScore)));
